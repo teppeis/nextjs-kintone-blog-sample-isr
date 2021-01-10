@@ -1,47 +1,107 @@
-import fs from 'fs'
-import { join } from 'path'
-import matter from 'gray-matter'
+import { KintoneRestAPIClient } from "@kintone/rest-api-client";
+import { AppID, Record } from "@kintone/rest-api-client/lib/client/types";
+import PostType from "../types/post";
 
-const postsDirectory = join(process.cwd(), '_posts')
-
-export function getPostSlugs() {
-  return fs.readdirSync(postsDirectory)
-}
-
-export function getPostBySlug(slug: string, fields: string[] = []) {
-  const realSlug = slug.replace(/\.md$/, '')
-  const fullPath = join(postsDirectory, `${realSlug}.md`)
-  const fileContents = fs.readFileSync(fullPath, 'utf8')
-  const { data, content } = matter(fileContents)
-
-  type Items = {
-    [key: string]: string
+export async function getPostBySlug(slug: string): Promise<PostType> {
+  const query = `slug = "${esc(slug)}"`;
+  const records = await getRecords(query);
+  if (records.length !== 1) {
+    throw new TypeError(
+      `records.length should be 1, but actually ${records.length}`
+    );
   }
-
-  const items: Items = {}
-
-  // Ensure only the minimal needed data is exposed
-  fields.forEach((field) => {
-    if (field === 'slug') {
-      items[field] = realSlug
-    }
-    if (field === 'content') {
-      items[field] = content
-    }
-
-    if (data[field]) {
-      items[field] = data[field]
-    }
-  })
-
-  return items
+  return convertRecordToPost(records[0]);
 }
 
-export function getAllPosts(fields: string[] = []) {
-  const slugs = getPostSlugs()
-  const posts = slugs
-    .map((slug) => getPostBySlug(slug, fields))
-    // sort posts by date in descending order
-    .sort((post1, post2) => (post1.date > post2.date ? -1 : 1))
-  return posts
+export async function getAllPosts(): Promise<PostType[]> {
+  const query = "order by date desc limit 10";
+  const records = await getRecords(query);
+  const posts: PostType[] = records.map(convertRecordToPost);
+  return posts;
+}
+
+async function getRecords(query: string): Promise<Record[]> {
+  const kintone = createClient();
+  const app = getTargetAppId();
+  const { records } = await kintone.record.getRecords({
+    app,
+    fields: [
+      "slug",
+      "title",
+      "date",
+      "coverImage",
+      "excerpt",
+      "authorName",
+      "authorPicture",
+      "ogImage",
+      "content",
+    ],
+    query,
+  });
+  return records;
+}
+
+function esc(str: string): string {
+  return str.replace(/"/g, '\\"');
+}
+
+function convertRecordToPost(record: Record): PostType {
+  if (
+    !(
+      record.slug?.type === "SINGLE_LINE_TEXT" &&
+      record.title?.type === "SINGLE_LINE_TEXT" &&
+      record.date?.type === "DATETIME" &&
+      record.coverImage?.type === "SINGLE_LINE_TEXT" &&
+      record.excerpt?.type === "SINGLE_LINE_TEXT" &&
+      record.authorName?.type === "SINGLE_LINE_TEXT" &&
+      record.authorPicture?.type === "SINGLE_LINE_TEXT" &&
+      record.ogImage?.type === "SINGLE_LINE_TEXT" &&
+      record.content?.type === "MULTI_LINE_TEXT"
+    )
+  ) {
+    console.error("Invalid record", { record });
+    throw new TypeError(`Invalid record ${JSON.stringify(record)}`);
+  }
+  return {
+    slug: record.slug.value,
+    title: record.title.value,
+    date: record.date.value,
+    coverImage: record.coverImage.value,
+    author: {
+      name: record.authorName.value,
+      picture: record.authorPicture.value,
+    },
+    excerpt: record.excerpt.value,
+    ogImage: {
+      url: record.ogImage.value,
+    },
+    content: record.content.value,
+  };
+}
+
+function getTargetAppId(): AppID {
+  const appId = process.env.KINTONE_APP_ID;
+  if (typeof appId !== "string") {
+    throw new TypeError("Specify KINTONE_APP_ID in env");
+  }
+  if (!/^[1-9][0-9]*$/.test(appId)) {
+    throw new TypeError(`Invalid KINTONE_APP_ID: ${appId}`);
+  }
+  return appId;
+}
+
+function createClient(): KintoneRestAPIClient {
+  const baseUrl = process.env.KINTONE_BASE_URL;
+  const apiToken = process.env.KINTONE_API_TOKEN;
+  if (!(typeof baseUrl === "string" && typeof apiToken === "string")) {
+    throw new TypeError(
+      "Specify KINTONE_BASE_URL and KINTONE_API_TOKEN in env"
+    );
+  }
+  return new KintoneRestAPIClient({
+    baseUrl,
+    auth: {
+      apiToken,
+    },
+  });
 }

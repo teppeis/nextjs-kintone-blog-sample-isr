@@ -1,27 +1,27 @@
-import { useRouter } from 'next/router'
-import ErrorPage from 'next/error'
-import Container from '../../components/container'
-import PostBody from '../../components/post-body'
-import Header from '../../components/header'
-import PostHeader from '../../components/post-header'
-import Layout from '../../components/layout'
-import { getPostBySlug, getAllPosts } from '../../lib/api'
-import PostTitle from '../../components/post-title'
-import Head from 'next/head'
-import { CMS_NAME } from '../../lib/constants'
-import markdownToHtml from '../../lib/markdownToHtml'
-import PostType from '../../types/post'
+import { GetStaticPaths, GetStaticProps } from "next";
+import ErrorPage from "next/error";
+import Head from "next/head";
+import { useRouter } from "next/router";
+import Container from "../../components/container";
+import Header from "../../components/header";
+import Layout from "../../components/layout";
+import PostBody from "../../components/post-body";
+import PostHeader from "../../components/post-header";
+import PostTitle from "../../components/post-title";
+import { getPostBySlug } from "../../lib/api";
+import { CMS_NAME } from "../../lib/constants";
+import markdownToHtml from "../../lib/markdownToHtml";
+import PostType from "../../types/post";
 
 type Props = {
-  post: PostType
-  morePosts: PostType[]
-  preview?: boolean
-}
+  post: PostType;
+  preview?: boolean;
+};
 
-const Post = ({ post, morePosts, preview }: Props) => {
-  const router = useRouter()
+const Post = ({ post, preview }: Props) => {
+  const router = useRouter();
   if (!router.isFallback && !post?.slug) {
-    return <ErrorPage statusCode={404} />
+    return <ErrorPage statusCode={404} />;
   }
   return (
     <Layout preview={preview}>
@@ -50,50 +50,41 @@ const Post = ({ post, morePosts, preview }: Props) => {
         )}
       </Container>
     </Layout>
-  )
-}
+  );
+};
 
-export default Post
+export default Post;
 
 type Params = {
-  params: {
-    slug: string
+  slug: string;
+};
+
+export const getStaticProps: GetStaticProps<Props, Params> = async ({
+  params,
+}) => {
+  if (!params) {
+    return { notFound: true };
   }
-}
+  try {
+    const post = await getPostBySlug(params.slug);
+    const content = await markdownToHtml(post.content || "");
 
-export async function getStaticProps({ params }: Params) {
-  const post = getPostBySlug(params.slug, [
-    'title',
-    'date',
-    'slug',
-    'author',
-    'content',
-    'ogImage',
-    'coverImage',
-  ])
-  const content = await markdownToHtml(post.content || '')
-
-  return {
-    props: {
-      post: {
-        ...post,
-        content,
-      },
-    },
-  }
-}
-
-export async function getStaticPaths() {
-  const posts = getAllPosts(['slug'])
-
-  return {
-    paths: posts.map((posts) => {
-      return {
-        params: {
-          slug: posts.slug,
+    return {
+      props: {
+        post: {
+          ...post,
+          content,
         },
-      }
-    }),
-    fallback: false,
+      },
+    };
+  } catch {
+    return { notFound: true };
   }
-}
+};
+
+export const getStaticPaths: GetStaticPaths<Params> = async () => {
+  return {
+    paths: [],
+    fallback: "blocking",
+  };
+};
