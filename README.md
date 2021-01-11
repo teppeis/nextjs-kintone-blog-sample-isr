@@ -9,8 +9,6 @@ Incremental Static Regeneration (ISR) ensures you retain the benefits of static:
 - Pages never go offline. If the background page re-generation fails, the old page remains unaltered
 - Low database and backend load. Pages are re-computed at most once concurrently
 
-## How to use
-
 ## Deploy your own
 
 Deploy the example using [Vercel](https://vercel.com):
