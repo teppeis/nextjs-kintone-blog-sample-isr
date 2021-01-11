@@ -1,35 +1,34 @@
-# A statically generated blog example using Next.js, Markdown, and TypeScript
+# A blog example using Next.js and Kintone with ISR (Incremental Static Regeneration)
 
-This is the existing [blog-starter](https://github.com/vercel/next.js/tree/canary/examples/blog-starter) plus TypeScript.
+This example showcases Next.js's [Incremental Static Regeneration](https://nextjs.org/docs/basic-features/data-fetching#incremental-static-regeneration) feature using [Kintone](https://www.kintone.com/) as CMS and the data source. This is based on [blog-starter-typescript](https://github.com/vercel/next.js/tree/canary/examples/blog-starter-typescript).
 
-This example showcases Next.js's [Static Generation](https://nextjs.org/docs/basic-features/pages) feature using Markdown files as the data source.
+The blog posts are stored in Kintone. If you add a new blog post or edit an existing post in Kintone, they will be available almost immediately, without having to re-build your app or make a new deployment. Next.js will attempt to fetch latest data from Kintone and re-generate the page in the background when a request comes in at most once every 10 seconds in this example.
 
-The blog posts are stored in `/_posts` as Markdown files with front matter support. Adding a new Markdown file in there will create a new blog post.
-
-To create the blog posts we use [`remark`](https://github.com/remarkjs/remark) and [`remark-html`](https://github.com/remarkjs/remark-html) to convert the Markdown files into an HTML string, and then send it down as a prop to the page. The metadata of every post is handled by [`gray-matter`](https://github.com/jonschlinkert/gray-matter) and also sent in props to the page.
+Incremental Static Regeneration (ISR) ensures you retain the benefits of static:
+- No spikes in latency. Pages are served consistently fast
+- Pages never go offline. If the background page re-generation fails, the old page remains unaltered
+- Low database and backend load. Pages are re-computed at most once concurrently
 
 ## How to use
 
 ## Deploy your own
 
-Deploy the example using [Vercel](https://vercel.com?utm_source=github&utm_medium=readme&utm_campaign=next-example):
+Deploy the example using [Vercel](https://vercel.com):
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/git/external?repository-url=https://github.com/vercel/next.js/tree/canary/examples/blog-starter-typescript&project-name=blog-starter-typescript&repository-name=blog-starter-typescript)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/git/external?repository-url=https://github.com/teppeis/nextjs-kintone-blog-sample-isr&project-name=nextjs-kintone-blog-sample-isr&repository-name=nextjs-kintone-blog-sample-isr)
 
-Execute [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app) with [npm](https://docs.npmjs.com/cli/init) or [Yarn](https://yarnpkg.com/lang/en/docs/cli/create/) to bootstrap the example:
+Required Environment variables:
+- `KINTONE_BASE_URL`: Like `https://<your-domain>.cybozu.com`
+- `KINTONE_APP_ID`: Your Kintone app for the blog. Like `123`
+- `KINTONE_API_TOKEN`: API token with read permission for your app
 
-```bash
-npx create-next-app --example blog-starter-typescript blog-starter-typescript-app
-# or
-yarn create next-app --example blog-starter-typescript blog-starter-typescript-app
-```
-
-Your blog should be up and running on [http://localhost:3000](http://localhost:3000)! If it doesn't work, post on [GitHub discussions](https://github.com/vercel/next.js/discussions).
-
-Deploy it to the cloud with [Vercel](https://vercel.com/new?utm_source=github&utm_medium=readme&utm_campaign=next-example) ([Documentation](https://nextjs.org/docs/deployment)).
-
-# Notes
-
-This blog-starter-typescript uses [Tailwind CSS](https://tailwindcss.com). To control the generated stylesheet's filesize, this example uses Tailwind CSS' v2.0 [`purge` option](https://tailwindcss.com/docs/controlling-file-size/#removing-unused-css) to remove unused CSS.
-
-[Tailwind CSS v2.0 no longer supports Node.js 8 or 10](https://tailwindcss.com/docs/upgrading-to-v2#upgrade-to-node-js-12-13-or-higher). To build your CSS you'll need to ensure you are running Node.js 12.13.0 or higher in both your local and CI environments.
+Required Kintone app schema:
+- `slug`: `SINGLE_LINE_TEXT`
+- `title`: `SINGLE_LINE_TEXT`
+- `date`: `DATETIME`
+- `coverImage`: `SINGLE_LINE_TEXT`
+- `excerpt`: `SINGLE_LINE_TEXT`
+- `authorName`: `SINGLE_LINE_TEXT`
+- `authorPicture`: `SINGLE_LINE_TEXT`
+- `ogImage`: `SINGLE_LINE_TEXT`
+- `content`: `MULTI_LINE_TEXT`
