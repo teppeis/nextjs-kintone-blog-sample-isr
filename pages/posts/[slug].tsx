@@ -76,6 +76,7 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({
           content,
         },
       },
+      revalidate: 10,
     };
   } catch {
     return { notFound: true };
